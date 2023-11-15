@@ -33,6 +33,7 @@ def mining(messages):
 
 def check_buffer(messages):
     if len(messages) == 3:
+        messages = []
         current_hash, nonce = mining(messages)
         create_block(messages, current_hash, nonce)
 
