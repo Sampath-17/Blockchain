@@ -33,9 +33,9 @@ def mining(messages):
 
 def check_buffer(messages):
     if len(messages) == 3:
-        messages = []
         current_hash, nonce = mining(messages)
         create_block(messages, current_hash, nonce)
+        messages.clear()
 
 
 def create_block(messages, current_hash, nonce):
@@ -58,9 +58,9 @@ def receive_messages(client_socket):
                 break
 
             decrypted_message = data.decode("utf-8")
+            print(decrypted_message)
             message_buffer.append(decrypted_message)
             check_buffer(message_buffer)
-            print(decrypted_message)
         except:
             break
 
@@ -74,6 +74,8 @@ def start_client():
 
     while True:
         message = input("Enter a message to send: ")
+        message_buffer.append(message)
+        check_buffer(message_buffer)
         client.send(message.encode("utf-8"))
 
 
