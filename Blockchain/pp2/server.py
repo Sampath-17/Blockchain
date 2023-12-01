@@ -1,9 +1,7 @@
 import json
 import socket
 import threading
-from transaction import Transaction
 from getKeys import generate_keys
-from blockHash import calculate_hash
 
 public_keys = {}
 private_keys = {}
@@ -11,6 +9,7 @@ clients = []
 
 blockChain = []
 
+accept = 0
 
 
 def broadcast_to_clients(message):
@@ -18,7 +17,6 @@ def broadcast_to_clients(message):
         client.send(message.encode("utf-8"))
 
 
-accept = 0
 
 def check_acceptance():
     if accept >= 1:
@@ -28,9 +26,10 @@ def check_acceptance():
 
 
 def statistics(message):
+    global accept
     print("Came here")
     print(message.endswith("T"))
-    if message.endswith("T") == True:
+    if message.endswith("T"):
         accept = accept + 1
         print(accept)
         check_acceptance()
