@@ -16,8 +16,8 @@ blockChain = ["BLK/0000/publickey/privatekey/amount/nonce/" + hashlib.sha256("BL
 
 message_buffer = []
 
-def send_server(message):
-    client.send(message.encode("utf-8"))
+# def send_server(message):
+#     client.send(message.encode("utf-8"))
 
 
 def mining(messages):
@@ -37,7 +37,7 @@ def check_buffer(messages):
         current_hash, nonce = mining(messages)
         print("Created a block", messages, current_hash, nonce)
         data = "BLK/" + blockChain[-1].split("/")[-1] + "/" + messages[0] + "/" + messages[1] + "/" + messages[2] + "/" + str(nonce) + "/" + current_hash
-        send_server(data)
+        client.send(data.encode("utf-8"))
         messages.clear()
 
 
@@ -54,14 +54,15 @@ def check_blockChain():
 
 def add_block(message):
     block_buffer.append(message)
-    print(message)
-    check_blockChain()
-    pass
+    print("I added to the buffer")
+    if check_blockChain():
+        print("I think its right for this blockChain")
+        client.send("CHK/T".encode("utf-8"))
 
 
 def update_recent(message):
     # Check the truth of adding the block in block Chain or not
-    pass
+    print("Should be done")
 
 
 def receive_messages(client_socket):
@@ -77,6 +78,7 @@ def receive_messages(client_socket):
                 print(received_data)
                 check_buffer(message_buffer)
             elif received_data.startswith("BLK"):
+                print("I think I received a block")
                 add_block(received_data)
             elif received_data.startswith("UPT"):
                 update_recent(received_data)
@@ -111,7 +113,7 @@ def start_client():
 
     while True:
         message = input("Enter a message to send: ")
-        send_server(message)
+        client.send(message.encode("utf-8"))
 
 
 if __name__ == "__main__":
