@@ -2,6 +2,7 @@ import json
 import socket
 import threading
 import rsa
+import random
 
 from getKeys import verify_key_pair
 
@@ -47,10 +48,15 @@ def adds(username, public_key):
 
 
 def mining(messages):
-    nonce = 0
+    nonce = random.randint(-10000, -1)
     print("Are you here?")
     abcd = blockChain[-1].split("/")[-1]
     while True:
+        n_temp = 0
+        if nonce < 0:
+            n_temp = (-1) * nonce
+        else:
+            n_temp = nonce
         data = (
             "BLK/"
             + abcd
@@ -61,11 +67,11 @@ def mining(messages):
             + "/"
             + messages[2]
             + "/"
-            + str(nonce)
+            + str(n_temp)
             + "/"
         )
         current_hash = hashlib.sha256(data.encode("utf-8")).hexdigest()
-        if current_hash.startswith("0000"):
+        if current_hash.startswith("0000") and nonce > 0:
             return current_hash, nonce
         nonce += 1
 
