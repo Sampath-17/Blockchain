@@ -1,3 +1,4 @@
+import hashlib
 import json
 import socket
 import threading
@@ -7,35 +8,52 @@ public_keys = {}
 private_keys = {}
 clients = []
 
-blockChain = []
+blockChain = [
+    "BLK/0000000000000000000000000000000000000000000000000000000000000000/publickey/privatekey/amount/nonce/"
+    + hashlib.sha256(
+        "BLK/0000000000000000000000000000000000000000000000000000000000000000/publickey/privatekey/amount/nonce/".encode(
+            "utf-8"
+        )
+    ).hexdigest()
+]
 
 accept = 0
+
+
+def keep_block(message):
+    found_prev = False
+    found_dup = False
+    found_discrepancy = True
+    previous_block_hash = message.split("/")[1]
+    current_block_hash = message.split("/")[-1]
+    for block in blockChain:
+        current_hash = block.split("/")[-1]
+        if current_hash == previous_block_hash:
+            found_prev = True
+        if current_hash == current_block_hash:
+            found_dup = True
+    if (
+        message[0] != message.split("/")[2]
+        and message[1] != message.split("/")[3]
+        and message[2] != message.split("/")[4]
+    ):
+        found_discrepancy = False
+    if not found_discrepancy:
+        if not found_dup:
+            if found_prev:
+                blockChain.append(message)
+                print(blockChain)
+            else:
+                print("Block doesn't belong to your block chain")
+        else:
+            print("Block already added to your block chain")
+    else:
+        print("Defected block received")
 
 
 def broadcast_to_clients(message):
     for client in clients:
         client.send(message.encode("utf-8"))
-
-
-
-def check_acceptance():
-    if accept >= 1:
-        broadcast_to_clients("UPT/T")
-    else:
-        broadcast_to_clients("UPT/F")
-
-
-def statistics(message):
-    global accept
-    print("Came here")
-    print(message.endswith("T"))
-    if message.endswith("T"):
-        accept = accept + 1
-        print(accept)
-        check_acceptance()
-    else:
-        return
-
 
 
 def send_blockchain(client_socket):
@@ -69,8 +87,11 @@ def handle_client(client_socket, clients):
             data = client_socket.recv(1024)
             message = data.decode("utf-8")
             print(message)
-            if message.startswith("CHK"):
-                statistics(message)
+            if message.startswith("BLK"):
+                keep_block(message)
+                broadcast_to_clients(message)
+            elif message.startswith("TXN"):
+                broadcast_to_clients(message)
             else:
                 broadcast_to_clients(message)
         except:
