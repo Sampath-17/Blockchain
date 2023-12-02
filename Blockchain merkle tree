@@ -1,13 +1,15 @@
 import hashlib
 
 class Block:
-    def __init__(self, data, previous_hash):
-        self.data = data
+    def __init__(self, data1,data2,data3, previous_hash):
+        self.data1= data1
+        self.data2= data2
+        self.data3= data3
         self.previous_hash = previous_hash
         self.hash = self.calculate_hash()
 
     def calculate_hash(self):
-        return hashlib.sha256((str(self.data) + str(self.previous_hash)).encode()).hexdigest()
+        return hashlib.sha256((str(self.data1) + str(self.previous_hash)+str(self.data2)+str(self.data3) ).encode()).hexdigest()
 
 def build_merkle_tree(blocks):
     merkle_tree = []
@@ -27,18 +29,27 @@ def build_merkle_tree(blocks):
     return merkle_tree[0]
 
 def main():
-    # Create blocks for the blockchain
-    block1 = Block("Transaction Data 1", "0")
-    block2 = Block("Transaction Data 2", "0")
-    block3 = Block("Transaction Data 3", "0")
-    block4 = Block("Transaction Data 4", "0")
-    block5 = Block("Transaction Data 5", "0")
+    L1 =['BLK/0000000000000000000000000000000000000000000000000000000000000000/TXN-Vivek-Kumar-300/TXN-Kumar-Vivek-100/TXN-Vivek-Vivek-100/0/d15201403aa9bbe00591c9e32e91fab5d58b3504739699110e49dfce1ea61622']
+    w = L1[0].split("/")
+    if w[0] =='BLK':
+        block1=Block(w[2],w[3],w[4],w[1])
+    L2 =['BLK/0000000000000000000000000000000000000000000000000000000000000001/TXN-Vivek-Kumar-301/TXN-Kumar-Vivek-102/TXN-Vivek-Vivek-103/0/d15201403aa9bbe00591c9e32e91fab5d58b3504739699110e49dfce1ea61622']
+    w2 = L1[0].split("/")
+    if w2[0] =='BLK':
+        block2=Block(w2[2],w2[3],w2[4],w2[1])
+    L3 =['BLK/0000000000000000000000000000000000000000000000000000000000000001/TXN-Vivek-Kumar-305/TXN-Kumar-Vivek-107/TXN-Vivek-Vivek-109/0/d15201403aa9bbe00591c9e32e91fab5d58b3504739699110e49dfce1ea61622']
+    w3 = L1[0].split("/")
+    if w[0] =='BLK':
+        block3=Block(w3[2],w3[3],w3[4],w3[1])
+
+
+
 
     # Simulate branching by setting the same previous hash for blocks 2, 3, and 4
-    block2.previous_hash = block3.previous_hash = block4.previous_hash = block1.hash
+    block2.previous_hash = block3.previous_hash = block1.hash
 
     # Create a list of blocks
-    blocks = [block1, block2, block3, block4, block5]
+    blocks = [block1, block2,block3]
 
     # Build the Merkle Tree
     merkle_root = build_merkle_tree(blocks)
