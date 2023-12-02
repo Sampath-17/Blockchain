@@ -1,0 +1,55 @@
+import hashlib
+
+class Block:
+    def __init__(self, data, previous_hash):
+        self.data = data
+        self.previous_hash = previous_hash
+        self.hash = self.calculate_hash()
+
+    def calculate_hash(self):
+        return hashlib.sha256((str(self.data) + str(self.previous_hash)).encode()).hexdigest()
+
+def build_merkle_tree(blocks):
+    merkle_tree = []
+
+    for block in blocks:
+        merkle_tree.append(block.hash)
+
+    while len(merkle_tree) > 1:
+        temp_merkle_tree = []
+
+        for i in range(0, len(merkle_tree), 2):
+            hash_pair = merkle_tree[i] + merkle_tree[i + 1] if i + 1 < len(merkle_tree) else merkle_tree[i]
+            temp_merkle_tree.append(hashlib.sha256(hash_pair.encode()).hexdigest())
+
+        merkle_tree = temp_merkle_tree
+
+    return merkle_tree[0]
+
+def main():
+    # Create blocks for the blockchain
+    block1 = Block("Transaction Data 1", "0")
+    block2 = Block("Transaction Data 2", "0")
+    block3 = Block("Transaction Data 3", "0")
+    block4 = Block("Transaction Data 4", "0")
+    block5 = Block("Transaction Data 5", "0")
+
+    # Simulate branching by setting the same previous hash for blocks 2, 3, and 4
+    block2.previous_hash = block3.previous_hash = block4.previous_hash = block1.hash
+
+    # Create a list of blocks
+    blocks = [block1, block2, block3, block4, block5]
+
+    # Build the Merkle Tree
+    merkle_root = build_merkle_tree(blocks)
+
+    # Display Merkle Root
+    print(f"Merkle Root: {merkle_root}")
+
+    # Identify where the branching occurs in the Merkle Tree
+    for i, block in enumerate(blocks):
+        if i > 0 and block.previous_hash == blocks[i - 1].hash:
+            print(f"Branching occurs at Block {i + 1}: {block.hash}")
+
+if __name__== "__main__":
+    main()
