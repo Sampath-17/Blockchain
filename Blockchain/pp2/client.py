@@ -2,8 +2,6 @@ import json
 import socket
 import threading
 import rsa
-from blockHash import calculate_hash
-from classes import Transaction
 
 import hashlib
 
@@ -12,12 +10,9 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(("127.0.0.1", 5555))
 
 
-blockChain = ["BLK/0000/publickey/privatekey/amount/nonce/" + hashlib.sha256("BLK/0000/publickey/privatekey/amount/nonce/".encode("utf-8")).hexdigest()]
+blockChain = []
 
 message_buffer = []
-
-# def send_server(message):
-#     client.send(message.encode("utf-8"))
 
 
 def mining(messages):
@@ -25,7 +20,19 @@ def mining(messages):
     print("Are you here?")
     abcd = blockChain[-1].split("/")[-1]
     while True:
-        data = "BLK/" + abcd + "/" + messages[0] + "/" + messages[1] + "/" + messages[2] + "/" + str(nonce) + "/"
+        data = (
+            "BLK/"
+            + abcd
+            + "/"
+            + messages[0]
+            + "/"
+            + messages[1]
+            + "/"
+            + messages[2]
+            + "/"
+            + str(nonce)
+            + "/"
+        )
         current_hash = hashlib.sha256(data.encode("utf-8")).hexdigest()
         if current_hash.startswith("0000"):
             return current_hash, nonce
@@ -36,16 +43,22 @@ def check_buffer(messages):
     if len(messages) == 3:
         current_hash, nonce = mining(messages)
         print("Created a block", messages, current_hash, nonce)
-        data = "BLK/" + blockChain[-1].split("/")[-1] + "/" + messages[0] + "/" + messages[1] + "/" + messages[2] + "/" + str(nonce) + "/" + current_hash
+        data = (
+            "BLK/"
+            + blockChain[-1].split("/")[-1]
+            + "/"
+            + messages[0]
+            + "/"
+            + messages[1]
+            + "/"
+            + messages[2]
+            + "/"
+            + str(nonce)
+            + "/"
+            + current_hash
+        )
         client.send(data.encode("utf-8"))
         messages.clear()
-
-
-def create_block(messages, current_hash, nonce):
-    pass
-
-
-block_buffer = []
 
 
 def check_blockChain():
@@ -53,16 +66,34 @@ def check_blockChain():
 
 
 def add_block(message):
-    block_buffer.append(message)
-    print("I added to the buffer")
-    if check_blockChain():
-        print("I think its right for this blockChain")
-        client.send("CHK/T".encode("utf-8"))
-
-
-def update_recent(message):
-    # Check the truth of adding the block in block Chain or not
-    print("Should be done")
+    found_prev = False
+    found_dup = False
+    found_discrepancy = True
+    previous_block_hash = message.split("/")[1]
+    current_block_hash = message.split("/")[-1]
+    for block in blockChain:
+        current_hash = block.split("/")[-1]
+        if current_hash == previous_block_hash:
+            found_prev = True
+        if current_hash == current_block_hash:
+            found_dup = True
+    if (
+        message[0] != message.split("/")[2]
+        and message[1] != message.split("/")[3]
+        and message[2] != message.split("/")[4]
+    ):
+        found_discrepancy = False
+    if not found_discrepancy:
+        if not found_dup:
+            if found_prev:
+                blockChain.append(message)
+                print(blockChain)
+            else:
+                print("Block doesn't belong to your block chain")
+        else:
+            print("Block already added to your block chain")
+    else:
+        print("Defected block received")
 
 
 def receive_messages(client_socket):
@@ -80,8 +111,6 @@ def receive_messages(client_socket):
             elif received_data.startswith("BLK"):
                 print("I think I received a block")
                 add_block(received_data)
-            elif received_data.startswith("UPT"):
-                update_recent(received_data)
             else:
                 continue
         except:
