@@ -3,6 +3,7 @@ import json
 import socket
 import threading
 from getKeys import generate_keys
+import random
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -10,6 +11,7 @@ from matplotlib.animation import FuncAnimation
 public_keys = {}
 private_keys = {}
 clients = []
+txn_count = 0
 
 blockChain = [
     "BLK/0000000000000000000000000000000000000000000000000000000000000000/TXN-Vivek-Kumar-300/TXN-Kumar-Vivek-100/TXN-Vivek-Vivek-100/0/"
@@ -28,19 +30,29 @@ fig, ax = plt.subplots()
 
 x_vals = []
 y1_vals = []
+y2_vals = []
+y3_vals = []
+y4_vals = []
 
 alpha = 1.01  # For no, of clients
 beta = 1.02  # No, of Transactions
 gamma = 1.03  # No, of blocks
-deltta = 0.09  # Time spent
 
 
 def animate(i):
+    delta = 0.001 * (random.randint(random.randint(0, 2), random.randint(2, 4)))
     x_vals.append(i)
-    y1_vals.append(alpha * len(clients) + gamma * len(blockChain) + delta * i)
-
+    y1_vals.append(
+        alpha * len(clients) + gamma * len(blockChain) + delta * i + beta * txn_count
+    )
+    y2_vals.append(len(clients))
+    y3_vals.append(txn_count)
+    y4_vals.append(len(blockChain))
     ax.clear()
-    ax.plot(x_vals, y1_vals, label="Channel 1")
+    ax.plot(x_vals, y1_vals, label="Rate of Bitcoin Change")
+    ax.plot(x_vals, y2_vals, label="Clients count")
+    ax.plot(x_vals, y3_vals, label="Transactions count")
+    ax.plot(x_vals, y4_vals, label="Blocks count")
     ax.legend(loc="upper left")
     plt.tight_layout()
 
@@ -145,4 +157,9 @@ if __name__ == "__main__":
 
     # ani = FuncAnimation(fig, animate, interval=1000)
     # plt.show()
-    start_server()
+    server_thread = threading.Thread(target=start_server)
+    server_thread.start()
+
+    # Start the animation in the main thread
+    ani = FuncAnimation(fig, animate, interval=1000)
+    plt.show()
