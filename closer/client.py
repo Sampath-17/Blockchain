@@ -24,29 +24,7 @@ class Block:
         self.hash = hash
 
 
-def build_merkle_tree(blocks):
-    merkle_tree = []
-
-    for block in blocks:
-        merkle_tree.append(block.hash)
-
-    while len(merkle_tree) > 1:
-        temp_merkle_tree = []
-
-        for i in range(0, len(merkle_tree), 2):
-            hash_pair = (
-                merkle_tree[i] + merkle_tree[i + 1]
-                if i + 1 < len(merkle_tree)
-                else merkle_tree[i]
-            )
-            temp_merkle_tree.append(hashlib.sha256(hash_pair.encode()).hexdigest())
-
-        merkle_tree = temp_merkle_tree
-
-    return merkle_tree[0]
-
-
-blockChain = []
+blockChain = [[]]
 
 message_buffer = []
 
@@ -83,7 +61,7 @@ def adds(username, public_key):
 def mining(messages):
     nonce = random.randint(-10000, -1)
     print("Are you here?")
-    abcd = blockChain[-1].split("/")[-1]
+    abcd = blockChain[0][-1].split("/")[-1]
     while True:
         n_temp = 0
         if nonce < 0:
@@ -104,18 +82,20 @@ def mining(messages):
             + "/"
         )
         current_hash = hashlib.sha256(data.encode("utf-8")).hexdigest()
-        if current_hash.startswith("0000") and nonce > 0:
+        print("Trying mining on value: ", nonce)
+        if current_hash.startswith("00") and nonce > 0:
+            print("Obtained Nonce value: ", nonce)
             return current_hash, nonce
         nonce += 1
 
 
-def check_buffer(messages):
+def check_buffer(messages, username):
     if len(messages) == 3:
         current_hash, nonce = mining(messages)
         print("Created a block", messages, current_hash, nonce)
         data = (
             "BLK/"
-            + blockChain[-1].split("/")[-1]
+            + blockChain[0][-1].split("/")[-1]
             + "/"
             + messages[0]
             + "/"
@@ -125,12 +105,13 @@ def check_buffer(messages):
             + "/"
             + str(nonce)
             + "-"
-            + uname
+            + username
             + "-"
             + "5"
             + "/"
             + current_hash
         )
+        print("Trying to sent the block")
         client.send(data.encode("utf-8"))
         print("I sent the block to everyone")
         messages.clear()
@@ -165,41 +146,64 @@ def display_blocks(chain, indent=""):
 
 
 def add_block(message):
-    found_prev = False
-    found_dup = False
-    found_discrepancy = True
     previous_block_hash = message.split("/")[1]
     current_block_hash = message.split("/")[-1]
-    for block in blockChain:
-        current_hash = block.split("/")[-1]
-        if current_hash == previous_block_hash:
-            found_prev = True
-        if current_hash == current_block_hash:
-            found_dup = True
-    if (
-        message[0] != message.split("/")[2]
-        and message[1] != message.split("/")[3]
-        and message[2] != message.split("/")[4]
-    ):
-        found_discrepancy = False
-    if not found_discrepancy:
-        if not found_dup:
-            if found_prev:
-                blockChain.append(message)
-                print(blockChain)
-            else:
-                print("Block doesn't belong to your block chain")
-        else:
-            print("Block already added to your block chain")
+    found_prev = -1
+    branch = False
+    branchAt = -1
+    branchIn = -1
+    i = 0
+    k = 0
+    for blocks in blockChain:
+        j = 0
+        for block in blocks:
+            current_hash = blocks[j].split("/")[-1]
+            if current_hash == previous_block_hash:
+                branchAt = j
+            j = j + 1
+        if branchAt != len(blocks) - 1:
+            branch = True
+            branchIn = k
+        k = k + 1
+    if branch:
+        temp_block_chain = blockChain[branchIn][:branchAt]
+        temp_block_chain.append(message)
+        blockChain.append(temp_block_chain)
     else:
-        print("Defected block received")
+        for block in blockChain:
+            current_hash = block[-1].split("/")[-1]
+            if current_hash == previous_block_hash:
+                found_prev = i
+            i = i + 1
+        found_discrepancy = False
+        found_dup = False
+        if (
+            len(message) == 3
+            and message[0] != message.split("/")[2]
+            and message[1] != message.split("/")[3]
+            and message[2] != message.split("/")[4]
+        ):
+            found_discrepancy = False
+        if len(message) < 3:
+            found_discrepancy = False
+        if not found_discrepancy:
+            if not found_dup:
+                if found_prev != -1:
+                    blockChain[found_prev].append(message)
+                    print(blockChain)
+                else:
+                    print("Block doesn't belong to your block chain")
+            else:
+                print("Block already added to your block chain")
+        else:
+            print("Defected block received")
 
 
 def verify_transaction(obtained, transaction, signature):
     return signature == "digital"
 
 
-def receive_messages(client_socket):
+def receive_messages(client_socket, username):
     while True:
         try:
             data = client_socket.recv(8192)
@@ -216,7 +220,7 @@ def receive_messages(client_socket):
                     print("Transaction is right!")
                     message_buffer.append(received_data)
                     print(received_data)
-                    check_buffer(message_buffer)
+                    check_buffer(message_buffer, username)
                 else:
                     print("Invalid Transaction! Hence Discarded.")
             elif received_data.startswith("BLK"):
@@ -229,27 +233,30 @@ def receive_messages(client_socket):
 
 
 def check_amount(public_key):
-    amount = 0
-    for block in blockChain:
-        t1 = block.split("/")[2]
-        t2 = block.split("/")[3]
-        t3 = block.split("/")[4]
-        t4 = block.split("/")[5]
-        if public_key == t1.split("-")[1]:
-            amount = amount - int(t1.split("-")[3])
-        if public_key == t1.split("-")[2]:
-            amount = amount + int(t1.split("-")[3])
-        if public_key == t2.split("-")[1]:
-            amount = amount - int(t2.split("-")[3])
-        if public_key == t2.split("-")[2]:
-            amount = amount + int(t2.split("-")[3])
-        if public_key == t3.split("-")[1]:
-            amount = amount - int(t3.split("-")[3])
-        if public_key == t3.split("-")[2]:
-            amount = amount + int(t3.split("-")[3])
-        if public_key == t4.split("-")[1]:
-            amount = amount + int(t4.split("-")[2])
-    return amount
+    amounts = []
+    for blocks in blockChain:
+        amount = 0
+        for block in blocks:
+            t1 = block.split("/")[2]
+            t2 = block.split("/")[3]
+            t3 = block.split("/")[4]
+            t4 = block.split("/")[5]
+            if public_key == t1.split("-")[1]:
+                amount = amount - int(t1.split("-")[3])
+            if public_key == t1.split("-")[2]:
+                amount = amount + int(t1.split("-")[3])
+            if public_key == t2.split("-")[1]:
+                amount = amount - int(t2.split("-")[3])
+            if public_key == t2.split("-")[2]:
+                amount = amount + int(t2.split("-")[3])
+            if public_key == t3.split("-")[1]:
+                amount = amount - int(t3.split("-")[3])
+            if public_key == t3.split("-")[2]:
+                amount = amount + int(t3.split("-")[3])
+            if public_key == t4.split("-")[1]:
+                amount = amount + int(t4.split("-")[2])
+        amounts.append(amount)
+    return max(amounts), len(amounts)
 
 
 def start_client():
@@ -275,26 +282,32 @@ def start_client():
     uname = username
     updated_blockchain_data = client.recv(8192).decode("utf-8")
     updated_blockchain = json.loads(updated_blockchain_data)
-    blockChain.extend(updated_blockchain)
+    blockChain[0] = updated_blockchain
     print("Initial Blockchain:", blockChain)
 
-    receive_thread = threading.Thread(target=receive_messages, args=(client,))
+    receive_thread = threading.Thread(
+        target=receive_messages,
+        args=(
+            client,
+            username,
+        ),
+    )
     receive_thread.start()
-    money = check_amount(username)
+    money, status = check_amount(username)
+    if status > 1:
+        print("You have a branching in your account!")
     print("You have this much amount: ", money)
 
     while True:
         message = input("Enter a message to send: ")
         if message.startswith("PBK"):
-            merkle_tree = []
-            for block in blockChain:
-                w = block.split("/")
-                blk = Block(w[2], w[3], w[4], w[1], w[6])
-                merkle_tree.append(blk)
-            chain = find_chain(merkle_tree)
-            display_blocks(chain)
+            print(blockChain)
         elif message.startswith("AMT"):
-            print("You have: ", money)
+            mon, stat = check_amount(username)
+            if stat > 1:
+                print("You have a branching in your account!")
+            print("You have this much amount: ", mon)
+            money = mon
         elif message.startswith("TXN"):
             # TXN-Receiver-Amount
             m = message.split("-")
@@ -303,6 +316,8 @@ def start_client():
             else:
                 receiver = whos(m[1])
                 amount = int(m[2])
+                mon, stat = check_amount(username)
+                money = mon
                 if amount > money:
                     print(
                         "You don't have enough money for transacting this much amount"
