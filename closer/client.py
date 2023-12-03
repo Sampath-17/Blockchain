@@ -264,7 +264,7 @@ def check_amount(public_key):
             bf = bf - int(transaction.split("-")[3])
         if public_key == transaction.split("-")[2]:
             bf = bf + int(transaction.split("-")[3])
-    return (max(amounts) + bf), len(amounts)
+    return (min(amounts) + bf), len(amounts)
 
 
 def start_client():
