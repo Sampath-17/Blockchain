@@ -12,6 +12,7 @@ public_keys = {}
 private_keys = {}
 clients = []
 txn_count = 0
+message_buffer = []
 
 blockChain = [
     "BLK/0000000000000000000000000000000000000000000000000000000000000000/TXN-Vivek-Kumar-300/TXN-Kumar-Vivek-100/TXN-Vivek-Vivek-100/0-Vivek-5/"
@@ -77,15 +78,16 @@ def keep_block(message):
         if current_hash == current_block_hash:
             found_dup = True
     if (
-        message[0] != message.split("/")[2]
-        and message[1] != message.split("/")[3]
-        and message[2] != message.split("/")[4]
+        message_buffer[0] != message.split("/")[2]
+        and message_buffer[1] != message.split("/")[3]
+        and message_buffer[2] != message.split("/")[4]
     ):
         found_discrepancy = False
     if not found_discrepancy:
         if not found_dup:
             if found_prev:
                 blockChain.append(message)
+                message_buffer.clear()
                 print(blockChain)
             else:
                 print("Block doesn't belong to your block chain")
@@ -132,7 +134,9 @@ def handle_client(client_socket, clients):
                 broadcast_to_clients(message)
             elif message.startswith("TXN"):
                 global txn_count
+                global message_buffer
                 txn_count = txn_count + 1
+                message_buffer.append(message)
                 broadcast_to_clients(message)
             elif message.startswith("RAT"):
                 m = "VAL-" + str(update_cost(cost))
