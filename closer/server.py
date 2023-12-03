@@ -37,14 +37,22 @@ y4_vals = []
 alpha = 1.01  # For no, of clients
 beta = 1.02  # No, of Transactions
 gamma = 1.03  # No, of blocks
+cost = 1
+
+
+def update_cost(value):
+    global cost
+    cost = value
+    return cost
 
 
 def animate(i):
     delta = 0.001 * (random.randint(random.randint(0, 2), random.randint(2, 4)))
     x_vals.append(i)
-    y1_vals.append(
+    cost = update_cost(
         alpha * len(clients) + gamma * len(blockChain) + delta * i + beta * txn_count
     )
+    y1_vals.append(cost)
     ax.clear()
     ax.plot(x_vals, y1_vals, label="Rate of Bitcoin Change", linewidth=0.5)
     ax.legend(loc="upper left")
@@ -123,7 +131,12 @@ def handle_client(client_socket, clients):
                 keep_block(message)
                 broadcast_to_clients(message)
             elif message.startswith("TXN"):
+                global txn_count
+                txn_count = txn_count + 1
                 broadcast_to_clients(message)
+            elif message.startswith("RAT"):
+                m = "VAL-" + str(update_cost(cost))
+                client_socket.send(m.encode("utf-8"))
             else:
                 broadcast_to_clients(message)
         except:
