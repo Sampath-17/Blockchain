@@ -59,7 +59,7 @@ def adds(username, public_key):
 
 
 def mining(messages):
-    nonce = random.randint(-10000, -1)
+    nonce = random.randint(-100000, -1)
     print("Are you here?")
     abcd = blockChain[0][-1].split("/")[-1]
     while True:
@@ -83,7 +83,7 @@ def mining(messages):
         )
         current_hash = hashlib.sha256(data.encode("utf-8")).hexdigest()
         print("Trying mining on value: ", nonce)
-        if current_hash.startswith("00") and nonce > 0:
+        if current_hash.startswith("0000") and nonce > 0:
             print("Obtained Nonce value: ", nonce)
             return current_hash, nonce
         nonce += 1
@@ -114,7 +114,6 @@ def check_buffer(messages, username):
         print("Trying to sent the block")
         client.send(data.encode("utf-8"))
         print("I sent the block to everyone")
-        messages.clear()
 
 
 def check_blockChain():
@@ -148,55 +147,34 @@ def display_blocks(chain, indent=""):
 def add_block(message):
     previous_block_hash = message.split("/")[1]
     current_block_hash = message.split("/")[-1]
-    found_prev = -1
-    branch = False
-    branchAt = -1
-    branchIn = -1
-    i = 0
-    k = 0
-    for blocks in blockChain:
-        j = 0
-        for block in blocks:
-            current_hash = blocks[j].split("/")[-1]
+    k = -1
+    duplicated = False
+    for i, blocks in enumerate(blockChain):
+        current_hash = blocks[-1].split("/")[-1]
+        if current_hash == previous_block_hash:
+            k = i
+        if current_hash == current_block_hash:
+            duplicated = True
+
+    if duplicated:
+        print("Block already taken!")
+        return
+    elif k != -1:
+        blockChain[k].append(message)
+        message_buffer.clear()
+        return
+
+    for i, blocks in enumerate(blockChain):
+        for j, block in enumerate(blocks):
+            current_hash = block.split("/")[-1]
             if current_hash == previous_block_hash:
-                branchAt = j
-            j = j + 1
-        if branchAt != len(blocks) - 1:
-            branch = True
-            branchIn = k
-        k = k + 1
-    if branch:
-        temp_block_chain = blockChain[branchIn][:branchAt]
-        temp_block_chain.append(message)
-        blockChain.append(temp_block_chain)
-    else:
-        for block in blockChain:
-            current_hash = block[-1].split("/")[-1]
-            if current_hash == previous_block_hash:
-                found_prev = i
-            i = i + 1
-        found_discrepancy = False
-        found_dup = False
-        if (
-            len(message) == 3
-            and message[0] != message.split("/")[2]
-            and message[1] != message.split("/")[3]
-            and message[2] != message.split("/")[4]
-        ):
-            found_discrepancy = False
-        if len(message) < 3:
-            found_discrepancy = False
-        if not found_discrepancy:
-            if not found_dup:
-                if found_prev != -1:
-                    blockChain[found_prev].append(message)
-                    print(blockChain)
-                else:
-                    print("Block doesn't belong to your block chain")
-            else:
-                print("Block already added to your block chain")
-        else:
-            print("Defected block received")
+                new_chain = blocks[: j + 1] + [message]
+                blockChain.append(new_chain)
+                message_buffer.clear()
+                print(blockChain)
+                return
+
+    print("Block doesn't belong to your block chain")
 
 
 def verify_transaction(obtained, transaction, signature):
@@ -226,6 +204,8 @@ def receive_messages(client_socket, username):
             elif received_data.startswith("BLK"):
                 print("I think I received a block")
                 add_block(received_data)
+            elif received_data.startswith("VAL"):
+                print("Market Value of One Bitcoin is: ", received_data.split("-")[1])
             else:
                 continue
         except:
@@ -256,7 +236,13 @@ def check_amount(public_key):
             if public_key == t4.split("-")[1]:
                 amount = amount + int(t4.split("-")[2])
         amounts.append(amount)
-    return max(amounts), len(amounts)
+    bf = 0
+    for transaction in message_buffer:
+        if public_key == transaction.split("-")[1]:
+            bf = bf - int(transaction.split("-")[3])
+        if public_key == transaction.split("-")[2]:
+            bf = bf + int(transaction.split("-")[3])
+    return (max(amounts) + bf), len(amounts)
 
 
 def start_client():
@@ -331,6 +317,10 @@ def start_client():
                     client.send(txn.encode("utf-8"))
                 else:
                     print("No such user found")
+        elif message.startswith("TBF"):
+            print(message_buffer)
+        elif message.startswith("RAT"):
+            client.send(message.encode("utf-8"))
 
 
 if __name__ == "__main__":
