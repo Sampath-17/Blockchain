@@ -5,9 +5,11 @@ import rsa
 import random
 
 from getKeys import verify_key_pair
+from retrieve import load_blockchain, replace_blockchain
 
 import hashlib
 
+stage = False
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(("127.0.0.1", 5555))
@@ -60,6 +62,8 @@ def adds(username, public_key):
 
 def mining(messages):
     nonce = random.randint(-100000, -1)
+    if stage:
+        nonce = random.randint(-1000000, -100001)
     print("Are you here?")
     abcd = blockChain[0][-1].split("/")[-1]
     while True:
@@ -90,6 +94,8 @@ def mining(messages):
 
 
 def check_buffer(messages, username):
+    if stage:
+        return
     if len(messages) == 3:
         current_hash, nonce = mining(messages)
         print("Created a block", messages, current_hash, nonce)
@@ -144,6 +150,18 @@ def display_blocks(chain, indent=""):
             display_blocks(block.branches, indent + "  ")
 
 
+def normalise():
+    global stage
+    global blockChain
+    max_chain_length = max(len(chain) for chain in blockChain)
+    blockChain = [chain for chain in blockChain if len(chain) >= max_chain_length - 1]
+    if len(blockChain) > 1:
+        stage = True
+    else:
+        stage = False
+    print("Transaction stage: ", stage)
+
+
 def add_block(message):
     previous_block_hash = message.split("/")[1]
     current_block_hash = message.split("/")[-1]
@@ -162,6 +180,7 @@ def add_block(message):
     elif k != -1:
         blockChain[k].append(message)
         message_buffer.clear()
+        normalise()
         return
 
     for i, blocks in enumerate(blockChain):
@@ -172,6 +191,7 @@ def add_block(message):
                 blockChain.append(new_chain)
                 message_buffer.clear()
                 print(blockChain)
+                normalise()
                 return
 
     print("Block doesn't belong to your block chain")
@@ -204,6 +224,8 @@ def receive_messages(client_socket, username):
             elif received_data.startswith("BLK"):
                 print("I think I received a block")
                 add_block(received_data)
+                if not stage:
+                    replace_blockchain(blockChain)
             elif received_data.startswith("VAL"):
                 print("Market Value of One Bitcoin is: ", received_data.split("-")[1])
             else:
@@ -246,6 +268,8 @@ def check_amount(public_key):
 
 
 def start_client():
+    global uname
+    global blockChain
     keys_json = client.recv(8192).decode("utf-8")
     keys_data = json.loads(keys_json)
     public_key = keys_data["public_key"]
@@ -269,6 +293,7 @@ def start_client():
     updated_blockchain_data = client.recv(8192).decode("utf-8")
     updated_blockchain = json.loads(updated_blockchain_data)
     blockChain[0] = updated_blockchain
+    blockChain = load_blockchain()
     print("Initial Blockchain:", blockChain)
 
     receive_thread = threading.Thread(
@@ -288,6 +313,10 @@ def start_client():
         message = input("Enter a message to send: ")
         if message.startswith("PBK"):
             print(blockChain)
+        elif message.startswith("GET"):
+            rname = message.split("-")[1]
+            at, s = check_amount(rname)
+            print(rname, " has ", at, " amount.")
         elif message.startswith("AMT"):
             mon, stat = check_amount(username)
             if stat > 1:
@@ -295,6 +324,12 @@ def start_client():
             print("You have this much amount: ", mon)
             money = mon
         elif message.startswith("TXN"):
+            global stage
+            if stage:
+                print(
+                    "Your block chain is in confusion stage, currently you can't transact"
+                )
+                continue
             # TXN-Receiver-Amount
             m = message.split("-")
             if len(m) != 3:
@@ -321,6 +356,40 @@ def start_client():
             print(message_buffer)
         elif message.startswith("RAT"):
             client.send(message.encode("utf-8"))
+        elif message.startswith("WBK"):
+            wrong_block = (
+                "BLK/<WeirdPreviousBlockHash>/TXN-Vivek-Kumar-300/TXN-Kumar-Vivek-100/TXN-Vivek-Vivek-100/0-Vivek-5/"
+                + hashlib.sha256(
+                    "BLK/<WeirdPreviousBlockHash>/TXN-Vivek-Kumar-300/TXN-Kumar-Vivek-100/TXN-Vivek-Vivek-100/0-Vivek-5/".encode(
+                        "utf-8"
+                    )
+                ).hexdigest()
+            )
+            client.send(wrong_block.encode("utf-8"))
+        elif message.startswith("TSG"):
+            print("Transaction stage: ", stage)
+        elif message.startswith("BCH"):
+            t1 = "TXN-Vivek-" + username + "-500"
+            t2 = "TXN-Vivek-" + username + "-600"
+            t3 = "TXN-Vivek-" + username + "-700"
+            c_hash, noncy = mining([t1, t2, t3])
+            wrong_block = (
+                "BLK/"
+                + blockChain[0][-1].split("/")[-1]
+                + "/"
+                + t1
+                + "/"
+                + t2
+                + "/"
+                + t3
+                + "/"
+                + str(noncy)
+                + "-"
+                + username
+                + "-5/"
+                + c_hash
+            )
+            add_block(wrong_block)
 
 
 if __name__ == "__main__":
