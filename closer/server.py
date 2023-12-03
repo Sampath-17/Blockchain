@@ -97,6 +97,10 @@ def send_blockchain(client_socket):
     client_socket.send(blockchain_data.encode("utf-8"))
 
 
+def incr():
+    txn_count = txn_count + 1
+
+
 def handle_client(client_socket, clients):
     private_key, public_key = generate_keys()
 
