@@ -153,12 +153,100 @@ def display_blocks(chain, indent=""):
 def normalise():
     global stage
     global blockChain
+    global uname
+    agree = False
+    if stage:
+        agree = True
+    temp_chain = blockChain.copy()
     max_chain_length = max(len(chain) for chain in blockChain)
     blockChain = [chain for chain in blockChain if len(chain) >= max_chain_length - 1]
     if len(blockChain) > 1:
         stage = True
     else:
         stage = False
+        if agree:
+            i = 0
+            for chain in temp_chain:
+                k = 0
+                if chain != blockChain[0]:
+                    j = 0
+                    for block in chain:
+                        if block != blockChain[j]:
+                            k = j - 1
+                            break
+                        j = j + 1
+                while k < len(chain):
+                    # chain[k] is the one which is to be started to complement
+                    messed = "BLK/" + blockChain[0][-1].split("/")[-1] + "/"
+                    m1 = chain[k].split("/")[2]
+                    m2 = chain[k].split("/")[3]
+                    m3 = chain[k].split("/")[4]
+                    txn1 = ""
+                    if m1.split("-")[1] == uname:
+                        txn1 = (
+                            "TXN-"
+                            + m1.split("-")[2]
+                            + "-"
+                            + m1.split("-")[1]
+                            + "-"
+                            + m1.split("-")[3]
+                        )
+                    else:
+                        txn1 = (
+                            "TXN-"
+                            + m1.split("-")[2]
+                            + "-"
+                            + m1.split("-")[2]
+                            + "-"
+                            + str(0)
+                        )
+                    messed = messed + txn1 + "/"
+                    txn2 = ""
+                    if m2.split("-")[1] == uname:
+                        txn2 = (
+                            "TXN-"
+                            + m2.split("-")[2]
+                            + "-"
+                            + m2.split("-")[1]
+                            + "-"
+                            + m2.split("-")[3]
+                        )
+                    else:
+                        txn2 = (
+                            "TXN-"
+                            + m2.split("-")[2]
+                            + "-"
+                            + m2.split("-")[2]
+                            + "-"
+                            + str(0)
+                        )
+                    messed = messed + txn2 + "/"
+                    txn3 = ""
+                    if m3.split("-")[1] == uname:
+                        txn3 = (
+                            "TXN-"
+                            + m3.split("-")[2]
+                            + "-"
+                            + m3.split("-")[1]
+                            + "-"
+                            + m3.split("-")[3]
+                        )
+                    else:
+                        txn3 = (
+                            "TXN-"
+                            + m3.split("-")[2]
+                            + "-"
+                            + m3.split("-")[2]
+                            + "-"
+                            + str(0)
+                        )
+                    messed = messed + txn2 + "/"
+                    hsh, n = mining(messed)
+                    messed = messed + str(n) + "-someone-" + str(0) + "/" + hsh
+                    client.send(messed.encode("utf-8"))
+                    k = k + 1
+                    break
+
     print("Transaction stage: ", stage)
 
 
