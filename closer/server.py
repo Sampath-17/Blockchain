@@ -35,9 +35,9 @@ y2_vals = []
 y3_vals = []
 y4_vals = []
 
-alpha = 1.01  # For no, of clients
-beta = 1.02  # No, of Transactions
-gamma = 1.03  # No, of blocks
+alpha = 0.2  # For no, of clients
+beta = 0.1  # No, of Transactions
+gamma = 0.3  # No, of blocks
 cost = 1
 
 
@@ -47,8 +47,26 @@ def update_cost(value):
     return cost
 
 
+changes = 0
+prev = 0
+
+
+def trans(txn, ch):
+    n = txn - ch
+    if n < 0:
+        return 0
+    return n
+
+
 def animate(i):
-    delta = 0.001 * (random.randint(random.randint(0, 2), random.randint(2, 4)))
+    global changes
+    global prev
+    d = random.randint(1, 9)
+    y = random.randint(5000, 10000)
+    delta = (d / y) * (random.randint(random.randint(0, 2), random.randint(2, 3)))
+    if txn_count != prev:
+        prev = txn_count * i * 2
+        changes = i
     x_vals.append(i)
     cost = update_cost(
         alpha * len(clients) + gamma * len(blockChain) + delta * i + beta * txn_count
