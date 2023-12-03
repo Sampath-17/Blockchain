@@ -12,6 +12,39 @@ import hashlib
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(("127.0.0.1", 5555))
 
+uname = ""
+
+
+class Block:
+    def __init__(self, data1, data2, data3, previous_hash, hash):
+        self.data1 = data1
+        self.data2 = data2
+        self.data3 = data3
+        self.previous_hash = previous_hash
+        self.hash = hash
+
+
+def build_merkle_tree(blocks):
+    merkle_tree = []
+
+    for block in blocks:
+        merkle_tree.append(block.hash)
+
+    while len(merkle_tree) > 1:
+        temp_merkle_tree = []
+
+        for i in range(0, len(merkle_tree), 2):
+            hash_pair = (
+                merkle_tree[i] + merkle_tree[i + 1]
+                if i + 1 < len(merkle_tree)
+                else merkle_tree[i]
+            )
+            temp_merkle_tree.append(hashlib.sha256(hash_pair.encode()).hexdigest())
+
+        merkle_tree = temp_merkle_tree
+
+    return merkle_tree[0]
+
 
 blockChain = []
 
@@ -91,6 +124,10 @@ def check_buffer(messages):
             + messages[2]
             + "/"
             + str(nonce)
+            + "-"
+            + uname
+            + "-"
+            + "5"
             + "/"
             + current_hash
         )
@@ -101,6 +138,30 @@ def check_buffer(messages):
 
 def check_blockChain():
     return True
+
+
+def find_chain(blocks, previous_hash="0" * 64):
+    chain = []
+    for block in blocks:
+        if block.previous_hash == previous_hash:
+            branch = find_chain(blocks, block.hash)
+            if branch:
+                block.branches = branch
+            chain.append(block)
+    return chain
+
+
+def display_blocks(chain, indent=""):
+    for block in chain:
+        print(f"{indent}Data1: {block.data1}")
+        print(f"{indent}Data2: {block.data2}")
+        print(f"{indent}Data3: {block.data3}")
+        print(f"{indent}Previous Hash: {block.previous_hash}")
+        print(f"{indent}Hash: {block.hash}")
+
+        if hasattr(block, "branches") and block.branches:
+            print(f"{indent}Branches:")
+            display_blocks(block.branches, indent + "  ")
 
 
 def add_block(message):
@@ -173,6 +234,7 @@ def check_amount(public_key):
         t1 = block.split("/")[2]
         t2 = block.split("/")[3]
         t3 = block.split("/")[4]
+        t4 = block.split("/")[5]
         if public_key == t1.split("-")[1]:
             amount = amount - int(t1.split("-")[3])
         if public_key == t1.split("-")[2]:
@@ -185,6 +247,8 @@ def check_amount(public_key):
             amount = amount - int(t3.split("-")[3])
         if public_key == t3.split("-")[2]:
             amount = amount + int(t3.split("-")[3])
+        if public_key == t4.split("-")[1]:
+            amount = amount + int(t4.split("-")[2])
     return amount
 
 
@@ -208,7 +272,7 @@ def start_client():
         else:
             print("Private Key Verification Failed. Aborting...")
             return
-
+    uname = username
     updated_blockchain_data = client.recv(8192).decode("utf-8")
     updated_blockchain = json.loads(updated_blockchain_data)
     blockChain.extend(updated_blockchain)
@@ -222,7 +286,13 @@ def start_client():
     while True:
         message = input("Enter a message to send: ")
         if message.startswith("PBK"):
-            print(blockChain)
+            merkle_tree = []
+            for block in blockChain:
+                w = block.split("/")
+                blk = Block(w[2], w[3], w[4], w[1], w[6])
+                merkle_tree.append(blk)
+            chain = find_chain(merkle_tree)
+            display_blocks(chain)
         elif message.startswith("AMT"):
             print("You have: ", money)
         elif message.startswith("TXN"):

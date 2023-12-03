@@ -14,7 +14,7 @@ clients = []
 txn_count = 0
 
 blockChain = [
-    "BLK/0000000000000000000000000000000000000000000000000000000000000000/TXN-Vivek-Kumar-300/TXN-Kumar-Vivek-100/TXN-Vivek-Vivek-100/0/"
+    "BLK/0000000000000000000000000000000000000000000000000000000000000000/TXN-Vivek-Kumar-300/TXN-Kumar-Vivek-100/TXN-Vivek-Vivek-100/0-Vivek-5/"
     + hashlib.sha256(
         "BLK/0000000000000000000000000000000000000000000000000000000000000000/TXN-Vivek-Kumar-100/TXN-Kumar-Vivek-100/TXN-Vivek-Vivek-100/0/".encode(
             "utf-8"
@@ -45,14 +45,8 @@ def animate(i):
     y1_vals.append(
         alpha * len(clients) + gamma * len(blockChain) + delta * i + beta * txn_count
     )
-    y2_vals.append(len(clients))
-    y3_vals.append(txn_count)
-    y4_vals.append(len(blockChain))
     ax.clear()
-    ax.plot(x_vals, y1_vals, label="Rate of Bitcoin Change")
-    ax.plot(x_vals, y2_vals, label="Clients count")
-    ax.plot(x_vals, y3_vals, label="Transactions count")
-    ax.plot(x_vals, y4_vals, label="Blocks count")
+    ax.plot(x_vals, y1_vals, label="Rate of Bitcoin Change", linewidth=0.5)
     ax.legend(loc="upper left")
     plt.tight_layout()
 
