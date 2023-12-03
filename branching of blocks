@@ -1,0 +1,57 @@
+import hashlib
+import copy
+
+class Block:
+    def __init__(self, previous_hash, messages):
+        self.previous_hash = previous_hash
+        self.messages = messages
+        self.current_hash = self.calculate_hash()
+
+    def calculate_hash(self):
+        hash_data = str(self.previous_hash) + ''.join(self.messages)
+        return hashlib.sha256(hash_data.encode()).hexdigest()
+
+class Blockchain:
+    def __init__(self):
+        self.chain = []
+        self.branches = {}  # Store branches
+
+    def add_block(self, block):
+        self.chain.append(block)
+        
+        # Check if block branches off
+        if block.previous_hash in self.branches:
+            self.branches[block.current_hash] = copy.deepcopy(self.branches[block.previous_hash])
+            self.branches[block.current_hash].append(block)
+        else:
+            self.branches[block.current_hash] = [block]
+
+    def longest_chain(self):
+        longest = max(self.branches.values(), key=len)
+        self.chain = longest  # Update the chain with the longest branch
+
+
+# Example usage:
+
+# Create blocks
+block1 = Block("0", ["Transaction 1", "Transaction 2"])
+block2 = Block(block1.current_hash, ["Transaction 3", "Transaction 4"])
+block3 = Block(block1.current_hash, ["Transaction 5", "Transaction 6"])
+block4 = Block(block3.current_hash, ["Transaction 7", "Transaction 8"])
+
+# Create blockchain
+blockchain = Blockchain()
+blockchain.add_block(block1)
+blockchain.add_block(block2)
+blockchain.add_block(block3)
+blockchain.add_block(block4)
+
+# Print branches and longest chain
+print("Branches:")
+for branch in blockchain.branches.values():
+    print([block.current_hash for block in branch])
+
+blockchain.longest_chain()
+print("\nLongest Chain:")
+for block in blockchain.chain:
+    print(f"Previous Hash: {block.previous_hash}, Current Hash: {block.current_hash}, Messages: {block.messages}")
