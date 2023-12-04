@@ -457,6 +457,9 @@ def start_client():
         elif message.startswith("TSG"):
             print("Transaction stage: ", stage)
         elif message.startswith("BCH"):
+            print(
+                "Do it at your own risk, account money wouldn't be recoverable again."
+            )
             t1 = "TXN-Vivek-" + username + "-500"
             t2 = "TXN-Vivek-" + username + "-600"
             t3 = "TXN-Vivek-" + username + "-700"
